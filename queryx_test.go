@@ -26,7 +26,7 @@ func setupDB(t *testing.T) *DB {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	ctx := context.Background()
 	_, err = db.ExecContext(ctx, `CREATE TABLE users (
@@ -52,7 +52,7 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if db.DriverName() != "sqlite3" {
 		t.Errorf("DriverName = %q, want sqlite3", db.DriverName())
 	}
@@ -67,13 +67,13 @@ func TestConnect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 }
 
 func TestMustConnect(t *testing.T) {
 	ctx := context.Background()
 	db := MustConnect(ctx, "sqlite3", ":memory:")
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 }
 
 func TestMustConnectPanics(t *testing.T) {
@@ -212,7 +212,7 @@ func TestDB_NamedQueryContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NamedQueryContext: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	if !rows.Next() {
 		t.Fatal("expected a row")
@@ -260,7 +260,7 @@ func TestDB_Preparex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Preparex: %v", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	var user testUser
 	err = stmt.GetContext(ctx, &user, 1)
@@ -280,7 +280,7 @@ func TestStmt_SelectContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Preparex: %v", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	var users []testUser
 	err = stmt.SelectContext(ctx, &users)
@@ -300,7 +300,7 @@ func TestTx_GetContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BeginTxx: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var user testUser
 	err = tx.GetContext(ctx, &user, "SELECT * FROM users WHERE id = ?", 2)
@@ -320,7 +320,7 @@ func TestTx_SelectContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BeginTxx: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var users []testUser
 	err = tx.SelectContext(ctx, &users, "SELECT * FROM users ORDER BY id")
@@ -371,13 +371,13 @@ func TestTx_Preparex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BeginTxx: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.Preparex(ctx, "SELECT * FROM users WHERE id = ?")
 	if err != nil {
 		t.Fatalf("Tx.Preparex: %v", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	var user testUser
 	err = stmt.GetContext(ctx, &user, 1)
@@ -397,7 +397,7 @@ func TestTx_MustExecContext_Panics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BeginTxx: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	defer func() {
 		if r := recover(); r == nil {
@@ -412,7 +412,7 @@ func TestMustBeginTx(t *testing.T) {
 	ctx := context.Background()
 
 	tx := db.MustBeginTx(ctx, nil)
-	tx.Rollback()
+	_ = tx.Rollback()
 }
 
 func TestRows_StructScan(t *testing.T) {
@@ -423,7 +423,7 @@ func TestRows_StructScan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryContext: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	r := &Rows{Rows: rows, mapper: db.mapper}
 	var users []testUser
@@ -447,7 +447,7 @@ func TestRows_SliceScan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryContext: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	r := &Rows{Rows: rows, mapper: db.mapper}
 	if !r.Next() {
@@ -470,7 +470,7 @@ func TestRows_MapScan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryContext: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	r := &Rows{Rows: rows, mapper: db.mapper}
 	if !r.Next() {
@@ -493,7 +493,7 @@ func TestRows_StructScan_NilPointerError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryContext: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	r := &Rows{Rows: rows, mapper: db.mapper}
 	if !r.Next() {
@@ -513,7 +513,7 @@ func TestDB_PrepareNamedContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrepareNamedContext: %v", err)
 	}
-	defer ns.Close()
+	defer func() { _ = ns.Close() }()
 
 	var user testUser
 	err = ns.GetContext(ctx, &user, map[string]interface{}{"name": "alice"})
@@ -533,7 +533,7 @@ func TestNamedStmt_SelectContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrepareNamedContext: %v", err)
 	}
-	defer ns.Close()
+	defer func() { _ = ns.Close() }()
 
 	var users []testUser
 	err = ns.SelectContext(ctx, &users, map[string]interface{}{"min_id": 1})
@@ -554,7 +554,7 @@ func TestNamedStmt_ExecContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrepareNamedContext: %v", err)
 	}
-	defer ns.Close()
+	defer func() { _ = ns.Close() }()
 
 	_, err = ns.ExecContext(ctx, map[string]interface{}{
 		"id": 7, "name": "grace", "email": "grace@example.com",
@@ -572,13 +572,13 @@ func TestNamedStmt_QueryContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrepareNamedContext: %v", err)
 	}
-	defer ns.Close()
+	defer func() { _ = ns.Close() }()
 
 	rows, err := ns.QueryContext(ctx, map[string]interface{}{"name": "charlie"})
 	if err != nil {
 		t.Fatalf("NamedStmt.QueryContext: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	if !rows.Next() {
 		t.Fatal("expected a row")

@@ -99,7 +99,7 @@ func TestGenericGet_InTx(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BeginTxx: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	user, err := Get[testUser](ctx, tx, "SELECT * FROM users WHERE id = ?", 2)
 	if err != nil {

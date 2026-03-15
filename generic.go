@@ -11,13 +11,17 @@ import (
 
 // Get queries a single row and returns a value of type T.
 // T must be a struct type with db tags for column mapping.
-func Get[T any](ctx context.Context, ext ExtContext, query string, args ...interface{}) (T, error) {
+func Get[T any](ctx context.Context, ext ExtContext, query string, args ...interface{}) (_ T, retErr error) {
 	var zero T
 	rows, err := ext.QueryContext(ctx, query, args...)
 	if err != nil {
 		return zero, wrapQueryError("Get", query, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && retErr == nil {
+			retErr = closeErr
+		}
+	}()
 
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
@@ -34,7 +38,7 @@ func Get[T any](ctx context.Context, ext ExtContext, query string, args ...inter
 		if err := rows.Scan(&result); err != nil {
 			return zero, wrapQueryError("Get", query, err)
 		}
-		return result, rows.Close()
+		return result, nil
 	}
 
 	cols, err := rows.Columns()
@@ -54,20 +58,21 @@ func Get[T any](ctx context.Context, ext ExtContext, query string, args ...inter
 	if err := rows.Scan(values...); err != nil {
 		return zero, wrapQueryError("Get", query, err)
 	}
-	if err := rows.Close(); err != nil {
-		return zero, wrapQueryError("Get", query, err)
-	}
 	return result, nil
 }
 
 // Select queries multiple rows and returns a slice of type T.
 // T must be a struct type with db tags for column mapping.
-func Select[T any](ctx context.Context, ext ExtContext, query string, args ...interface{}) ([]T, error) {
+func Select[T any](ctx context.Context, ext ExtContext, query string, args ...interface{}) (_ []T, retErr error) {
 	rows, err := ext.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, wrapQueryError("Select", query, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && retErr == nil {
+			retErr = closeErr
+		}
+	}()
 
 	var result []T
 	v := reflect.ValueOf(new(T)).Elem()

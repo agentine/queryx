@@ -93,7 +93,7 @@ func Connect(ctx context.Context, driverName, dataSourceName string) (*DB, error
 		return nil, err
 	}
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 	return db, nil
@@ -411,8 +411,12 @@ func selectContext(ctx context.Context, ext Ext, mapper *reflectx.Mapper, dest i
 	return scanAll(rows, mapper, dest)
 }
 
-func scanOne(rows *sql.Rows, mapper *reflectx.Mapper, dest interface{}) error {
-	defer rows.Close()
+func scanOne(rows *sql.Rows, mapper *reflectx.Mapper, dest interface{}) (retErr error) {
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && retErr == nil {
+			retErr = closeErr
+		}
+	}()
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
 			return err
@@ -428,10 +432,7 @@ func scanOne(rows *sql.Rows, mapper *reflectx.Mapper, dest interface{}) error {
 
 	// Check if dest is a scalar type (not a struct).
 	if v.Kind() != reflect.Struct {
-		if err := rows.Scan(dest); err != nil {
-			return err
-		}
-		return rows.Close()
+		return rows.Scan(dest)
 	}
 
 	cols, err := rows.Columns()

@@ -72,12 +72,16 @@ func (ns *NamedStmt) QueryRowContext(ctx context.Context, arg interface{}) *sql.
 }
 
 // GetContext executes the named statement and scans a single row into dest.
-func (ns *NamedStmt) GetContext(ctx context.Context, dest interface{}, arg interface{}) error {
+func (ns *NamedStmt) GetContext(ctx context.Context, dest interface{}, arg interface{}) (retErr error) {
 	r, err := ns.QueryContext(ctx, arg)
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() {
+		if closeErr := r.Close(); closeErr != nil && retErr == nil {
+			retErr = closeErr
+		}
+	}()
 	if !r.Next() {
 		if err := r.Err(); err != nil {
 			return err
