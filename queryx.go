@@ -151,7 +151,7 @@ func (db *DB) SelectContext(ctx context.Context, dest interface{}, query string,
 
 // Preparex returns a prepared Stmt.
 func (db *DB) Preparex(ctx context.Context, query string) (*Stmt, error) {
-	s, err := db.DB.PrepareContext(ctx, query)
+	s, err := db.PrepareContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (db *DB) PrepareNamedContext(ctx context.Context, query string) (*NamedStmt
 
 // BeginTxx begins a transaction and returns a *Tx.
 func (db *DB) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
-	tx, err := db.DB.BeginTx(ctx, opts)
+	tx, err := db.BeginTx(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (tx *Tx) SelectContext(ctx context.Context, dest interface{}, query string,
 
 // Preparex returns a prepared Stmt.
 func (tx *Tx) Preparex(ctx context.Context, query string) (*Stmt, error) {
-	s, err := tx.Tx.PrepareContext(ctx, query)
+	s, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -449,14 +449,15 @@ func scanOne(rows *sql.Rows, mapper *reflectx.Mapper, dest interface{}) (retErr 
 			values[i] = f.Addr().Interface()
 		}
 	}
-	if err := rows.Scan(values...); err != nil {
-		return err
-	}
-	return rows.Close()
+	return rows.Scan(values...)
 }
 
-func scanAll(rows *sql.Rows, mapper *reflectx.Mapper, dest interface{}) error {
-	defer rows.Close()
+func scanAll(rows *sql.Rows, mapper *reflectx.Mapper, dest interface{}) (retErr error) {
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && retErr == nil {
+			retErr = closeErr
+		}
+	}()
 
 	dv := reflect.ValueOf(dest)
 	if dv.Kind() != reflect.Ptr || dv.IsNil() {

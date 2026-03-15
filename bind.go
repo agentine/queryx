@@ -162,7 +162,7 @@ func compileNamedQuery(bindType BindType, query string) (string, []string, error
 				}
 				j++
 			}
-			if j+1 >= len(query) && !(j < len(query) && query[j-1] == '/') {
+			if j+1 >= len(query) && (j >= len(query) || query[j-1] != '/') {
 				j = len(query)
 			}
 			b.WriteString(query[i:j])

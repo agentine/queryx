@@ -15,11 +15,6 @@ type testUser struct {
 	Email string `db:"email"`
 }
 
-type testEmbedded struct {
-	testUser
-	Phone string `db:"phone"`
-}
-
 func setupDB(t *testing.T) *DB {
 	t.Helper()
 	db, err := Open("sqlite3", ":memory:")
